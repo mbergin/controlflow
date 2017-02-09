@@ -53,7 +53,7 @@ func (fs *funcScope) tempVar(lbl *ast.Object) *ast.Ident {
 
 // pre: stmts only contains conditional gotos at the top level
 // post: stmts only contains conditional gotos for labels defined in an outer scope
-func elimSiblings(stmts []ast.Stmt) []ast.Stmt {
+func (fs *funcScope) elimSiblings(stmts []ast.Stmt) []ast.Stmt {
 	for {
 		// Find a goto pointing with a label inside the current block
 		gotoOffset := -1
@@ -100,7 +100,8 @@ func elimSiblings(stmts []ast.Stmt) []ast.Stmt {
 			loopBody = append(loopBody, labelStmt.Stmt)
 			loopBody = append(loopBody, stmts[lblOffset+1:gotoOffset]...)
 			loopBody = append(loopBody, makeIf(not(condition), []ast.Stmt{makeBreak()}))
-			newStmts = append(newStmts, labeled(labelStmt.Label, makeLoop(loopBody)))
+			newStmts = append(newStmts, labeled(labelStmt.Label, &ast.EmptyStmt{}))
+			newStmts = append(newStmts, fs.elimGotos(makeLoop(loopBody))...)
 			newStmts = append(newStmts, stmts[gotoOffset+1:]...)
 		}
 		stmts = newStmts
@@ -219,7 +220,7 @@ func (fs *funcScope) elimGotos(stmt ast.Stmt) []ast.Stmt {
 		stmts = newStmts
 
 		// Eliminate conditional gotos from this block
-		stmts = elimSiblings(stmts)
+		stmts = fs.elimSiblings(stmts)
 
 		// Remove the (now unused) labels
 		stmts = removeLabels(stmts)
@@ -227,6 +228,8 @@ func (fs *funcScope) elimGotos(stmt ast.Stmt) []ast.Stmt {
 		// Unconditional goto. Wrap in "if true { goto L }"
 		if stmt.Tok == token.GOTO {
 			stmts = fs.elimGotos(&ast.IfStmt{Cond: astTrue, Body: &ast.BlockStmt{List: []ast.Stmt{stmt}}})
+		} else {
+			stmts = []ast.Stmt{stmt}
 		}
 	default:
 		stmts = []ast.Stmt{stmt}

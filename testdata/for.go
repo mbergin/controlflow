@@ -64,3 +64,37 @@ func ForBackwardsExpected() {
 	}
 	block(5)
 }
+
+func ForNestedInput() {
+	block(1)
+L1:
+	block(2)
+L2:
+	block(3)
+	if cond(1) {
+		goto L2
+	}
+	block(4)
+	if cond(2) {
+		goto L1
+	}
+	block(5)
+}
+
+func ForNestedExpected() {
+	block(1)
+	for {
+		block(2)
+		for {
+			block(3)
+			if !cond(1) {
+				break
+			}
+		}
+		block(4)
+		if !cond(2) {
+			break
+		}
+	}
+	block(5)
+}
