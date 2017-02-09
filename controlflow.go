@@ -108,7 +108,7 @@ func elimSiblings(stmts []ast.Stmt) []ast.Stmt {
 	return stmts
 }
 
-func (fs *funcScope) liftGotoIf(stmts []ast.Stmt, postStmts map[*ast.Object]ast.Stmt) []ast.Stmt {
+func (fs *funcScope) liftGoto(stmts []ast.Stmt, postStmts map[*ast.Object]ast.Stmt, useBreak bool) []ast.Stmt {
 	for {
 		var newStmts []ast.Stmt
 		for i := len(stmts) - 1; i >= 0; i-- {
@@ -122,7 +122,12 @@ func (fs *funcScope) liftGotoIf(stmts []ast.Stmt, postStmts map[*ast.Object]ast.
 				if gotoIdent != condition {
 					newStmts = append(newStmts, assign(gotoIdent, condition))
 				}
-				if len(stmts[i+1:]) > 0 {
+				if useBreak {
+					// if gotoLabel { break }
+					newStmts = append(newStmts, makeIf(gotoIdent, []ast.Stmt{makeBreak()}))
+					// copy statements after the goto
+					newStmts = append(newStmts, stmts[i+1:]...)
+				} else if len(stmts[i+1:]) > 0 {
 					newStmts = append(newStmts, makeIf(not(gotoIdent), stmts[i+1:]))
 				}
 
@@ -154,12 +159,27 @@ func (fs *funcScope) moveGotosOutOfIf(ifStmt *ast.IfStmt) []ast.Stmt {
 	newIfStmt := &ast.IfStmt{
 		Init: ifStmt.Init,
 		Cond: ifStmt.Cond,
-		Body: &ast.BlockStmt{List: fs.liftGotoIf(ifStmt.Body.List, postStmts)},
+		Body: &ast.BlockStmt{List: fs.liftGoto(ifStmt.Body.List, postStmts, false)},
 	}
 	if elseBlock, ok := ifStmt.Else.(*ast.BlockStmt); ok {
-		newIfStmt.Else = makeElseBlock(fs.liftGotoIf(elseBlock.List, postStmts))
+		newIfStmt.Else = makeElseBlock(fs.liftGoto(elseBlock.List, postStmts, false))
 	}
 	stmts := []ast.Stmt{newIfStmt}
+	for _, post := range postStmts {
+		stmts = append(stmts, post)
+	}
+	return stmts
+}
+
+func (fs *funcScope) moveGotosOutOfFor(forStmt *ast.ForStmt) []ast.Stmt {
+	postStmts := map[*ast.Object]ast.Stmt{}
+	newForStmt := &ast.ForStmt{
+		Init: forStmt.Init,
+		Cond: forStmt.Cond,
+		Body: &ast.BlockStmt{List: fs.liftGoto(forStmt.Body.List, postStmts, true)},
+		Post: forStmt.Post,
+	}
+	stmts := []ast.Stmt{newForStmt}
 	for _, post := range postStmts {
 		stmts = append(stmts, post)
 	}
@@ -170,6 +190,7 @@ func (fs *funcScope) elimGotos(stmt ast.Stmt) []ast.Stmt {
 	var stmts []ast.Stmt
 	switch stmt := stmt.(type) {
 	case *ast.IfStmt:
+		// Only recurse if this is not a simple conditional goto
 		if conditionalGotoLabel(stmt) == nil {
 			stmt = replaceIfBody(stmt, fs.elimGotos(stmt.Body))
 			elseBlock := stmt.Else
@@ -187,6 +208,9 @@ func (fs *funcScope) elimGotos(stmt ast.Stmt) []ast.Stmt {
 		} else {
 			stmts = []ast.Stmt{stmt}
 		}
+	case *ast.ForStmt:
+		stmt = replaceForBody(stmt, fs.elimGotos(stmt.Body))
+		stmts = fs.moveGotosOutOfFor(stmt)
 	case *ast.BlockStmt:
 		var newStmts []ast.Stmt
 		for _, bodyStmt := range stmt.List {
