@@ -58,11 +58,10 @@ func elimSiblings(stmts []ast.Stmt) []ast.Stmt {
 		// Find a goto pointing with a label inside the current block
 		gotoOffset := -1
 		lblOffset := -1
-		var lbl *ast.Object
 		for i := len(stmts) - 1; i >= 0; i-- {
 
 			// Is this a conditional goto?
-			if lbl = conditionalGotoLabel(stmts[i]); lbl != nil {
+			if lbl := conditionalGotoLabel(stmts[i]); lbl != nil {
 
 				// Find the matching label
 				lblOffset = findLabelOffset(stmts, lbl)
