@@ -212,6 +212,8 @@ func removeLabels(stmts []ast.Stmt) []ast.Stmt {
 	return noLabels
 }
 
+// ElimGotos removes any goto statements from stmts by rewriting them as conditionals and loops.
+// A transformed syntax tree is returned; stmts is not modified.
 func ElimGotos(stmts []ast.Stmt) []ast.Stmt {
 	fs := newFuncScope()
 	elim := fs.elimGotos(&ast.BlockStmt{List: stmts})

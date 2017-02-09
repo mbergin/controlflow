@@ -2,9 +2,11 @@ A package to remove `goto` statements from a Go syntax tree by rewriting them as
 
 [![Build Status](https://travis-ci.org/mbergin/controlflow.svg?branch=master)](https://travis-ci.org/mbergin/controlflow)
 
-# Examples
+*This is an ongoing project and is incomplete. Please experiment with it but don't rely on it.*
 
-See [the tests](testdata).
+# Documentation and examples
+
+[controlflow documentation](https://godoc.org/github.com/mbergin/controlflow)
 
 # References
 
