@@ -230,6 +230,9 @@ func (fs *funcScope) elimGotos(stmt ast.Stmt) []ast.Stmt {
 		} else {
 			stmts = []ast.Stmt{stmt}
 		}
+	case *ast.LabeledStmt:
+		stmts = []ast.Stmt{&ast.LabeledStmt{Label: stmt.Label, Stmt: &ast.EmptyStmt{}}}
+		stmts = append(stmts, fs.elimGotos(stmt.Stmt)...)
 	default:
 		stmts = []ast.Stmt{stmt}
 	}

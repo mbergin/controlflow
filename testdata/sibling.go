@@ -100,3 +100,18 @@ func SiblingTwoLabelsLoopsExpected() {
 	}
 	block(5)
 }
+
+func SiblingEmptyLoopInput() {
+L1:
+	if cond(1) {
+		goto L1
+	}
+}
+
+func SiblingEmptyLoopExpected() {
+	for {
+		if !cond(1) {
+			break
+		}
+	}
+}
