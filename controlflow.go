@@ -8,9 +8,9 @@ import (
 	"os"
 )
 
-func findLabelOffset(stmts []ast.Stmt, lbl *ast.Object) int {
+func findLabelOffset(stmts []ast.Stmt, target *ast.Object) int {
 	for i, stmt := range stmts {
-		if _, ok := stmt.(*ast.LabeledStmt); ok {
+		if label, ok := stmt.(*ast.LabeledStmt); ok && label.Label.Obj == target {
 			return i
 		}
 	}
@@ -58,11 +58,12 @@ func elimOneGoto(stmts []ast.Stmt) []ast.Stmt {
 		stmt := stmts[i]
 		var newStmts []ast.Stmt
 		if lbl := conditionalGotoLabel(stmt); lbl != nil {
+			gotoOffset := i
 			condition := stmt.(*ast.IfStmt).Cond
 			lblOffset := findLabelOffset(stmts, lbl)
 			if lblOffset > 0 {
 				labelStmt := stmts[lblOffset].(*ast.LabeledStmt)
-				if i < lblOffset {
+				if gotoOffset < lblOffset {
 					// goto before label, eliminate with conditional
 					newStmts = append(newStmts, stmts[:i]...)
 					newStmts = append(newStmts, makeIf(not(condition), stmts[i+1:lblOffset]))
@@ -191,8 +192,13 @@ func (fs *funcScope) elimGotos(stmt ast.Stmt) []ast.Stmt {
 	return stmts
 }
 
-func p(stmts interface{}) {
-	printer.Fprint(os.Stdout, token.NewFileSet(), stmts)
+// dump numbered statements (for debugging)
+func p(stmts []ast.Stmt) {
+	for i, stmt := range stmts {
+		fmt.Printf("/*%d*/ ", i)
+		printer.Fprint(os.Stdout, token.NewFileSet(), stmt)
+		fmt.Println()
+	}
 	fmt.Println()
 	fmt.Println()
 }
