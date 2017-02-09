@@ -97,3 +97,31 @@ func DirectElseIfExpected() {
 	}
 	block(6)
 }
+
+func IfNestedInput() {
+	block(1)
+	if cond(1) {
+		goto L1
+	}
+	block(2)
+	if cond(2) {
+		goto L2
+	}
+	block(3)
+L2:
+	block(4)
+L1:
+	block(5)
+}
+
+func IfNestedExpected() {
+	block(1)
+	if !cond(1) {
+		block(2)
+		if !cond(2) {
+			block(3)
+		}
+		block(4)
+	}
+	block(5)
+}

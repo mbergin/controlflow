@@ -58,7 +58,7 @@ func (fs *funcScope) elimSiblings(stmts []ast.Stmt) []ast.Stmt {
 		// Find a goto pointing with a label inside the current block
 		gotoOffset := -1
 		lblOffset := -1
-		for i := len(stmts) - 1; i >= 0; i-- {
+		for i := range stmts {
 
 			// Is this a conditional goto?
 			if lbl := conditionalGotoLabel(stmts[i]); lbl != nil {
@@ -91,7 +91,7 @@ func (fs *funcScope) elimSiblings(stmts []ast.Stmt) []ast.Stmt {
 		if gotoOffset < lblOffset {
 			// goto before label, eliminate with conditional
 			newStmts = append(newStmts, stmts[:gotoOffset]...)
-			newStmts = append(newStmts, makeIf(not(condition), stmts[gotoOffset+1:lblOffset]))
+			newStmts = append(newStmts, fs.elimGotos(makeIf(not(condition), stmts[gotoOffset+1:lblOffset]))...)
 			newStmts = append(newStmts, stmts[lblOffset:]...)
 		} else {
 			// goto after label, eliminate with loop
@@ -112,8 +112,7 @@ func (fs *funcScope) elimSiblings(stmts []ast.Stmt) []ast.Stmt {
 func (fs *funcScope) liftGoto(stmts []ast.Stmt, postStmts map[*ast.Object]ast.Stmt, useBreak bool) []ast.Stmt {
 	for {
 		var newStmts []ast.Stmt
-		for i := len(stmts) - 1; i >= 0; i-- {
-			stmt := stmts[i]
+		for i, stmt := range stmts {
 			if lbl := conditionalGotoLabel(stmt); lbl != nil {
 				condition := stmt.(*ast.IfStmt).Cond
 				gotoIdent := fs.tempVar(lbl)
