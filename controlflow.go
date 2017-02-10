@@ -224,6 +224,18 @@ func (fs *funcScope) elimGotos(stmt ast.Stmt) []ast.Stmt {
 	case *ast.RangeStmt:
 		stmt = replaceRangeBody(stmt, fs.elimGotos(stmt.Body))
 		stmts = fs.moveGotosOutOfRange(stmt)
+	case *ast.SwitchStmt:
+		newSwitch := &ast.SwitchStmt{
+			Init: stmt.Init,
+			Tag:  stmt.Tag,
+			Body: &ast.BlockStmt{List: make([]ast.Stmt, len(stmt.Body.List))},
+		}
+		for i, s := range stmt.Body.List {
+			cc := s.(*ast.CaseClause)
+			tempBlock := &ast.BlockStmt{List: cc.Body}
+			newSwitch.Body.List[i] = replaceCaseClauseBody(cc, fs.elimGotos(tempBlock))
+		}
+		stmts = []ast.Stmt{newSwitch}
 	case *ast.BlockStmt:
 		var newStmts []ast.Stmt
 		for _, bodyStmt := range stmt.List {

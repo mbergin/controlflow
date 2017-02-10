@@ -65,3 +65,10 @@ func replaceRangeBody(stmt *ast.RangeStmt, body []ast.Stmt) *ast.RangeStmt {
 		Body:  &ast.BlockStmt{List: body},
 	}
 }
+
+func replaceCaseClauseBody(stmt *ast.CaseClause, body []ast.Stmt) *ast.CaseClause {
+	return &ast.CaseClause{
+		List: stmt.List,
+		Body: body,
+	}
+}
