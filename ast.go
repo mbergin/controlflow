@@ -55,3 +55,13 @@ func replaceForBody(stmt *ast.ForStmt, body []ast.Stmt) *ast.ForStmt {
 		Body: &ast.BlockStmt{List: body},
 	}
 }
+
+func replaceRangeBody(stmt *ast.RangeStmt, body []ast.Stmt) *ast.RangeStmt {
+	return &ast.RangeStmt{
+		Key:   stmt.Key,
+		Value: stmt.Value,
+		Tok:   stmt.Tok,
+		X:     stmt.X,
+		Body:  &ast.BlockStmt{List: body},
+	}
+}

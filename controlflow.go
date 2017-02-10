@@ -186,6 +186,16 @@ func (fs *funcScope) moveGotosOutOfFor(forStmt *ast.ForStmt) []ast.Stmt {
 	return stmts
 }
 
+func (fs *funcScope) moveGotosOutOfRange(rangeStmt *ast.RangeStmt) []ast.Stmt {
+	postStmts := map[*ast.Object]ast.Stmt{}
+	newRangeStmt := replaceRangeBody(rangeStmt, fs.liftGoto(rangeStmt.Body.List, postStmts, true))
+	stmts := []ast.Stmt{newRangeStmt}
+	for _, post := range postStmts {
+		stmts = append(stmts, post)
+	}
+	return stmts
+}
+
 func (fs *funcScope) elimGotos(stmt ast.Stmt) []ast.Stmt {
 	var stmts []ast.Stmt
 	switch stmt := stmt.(type) {
@@ -211,6 +221,9 @@ func (fs *funcScope) elimGotos(stmt ast.Stmt) []ast.Stmt {
 	case *ast.ForStmt:
 		stmt = replaceForBody(stmt, fs.elimGotos(stmt.Body))
 		stmts = fs.moveGotosOutOfFor(stmt)
+	case *ast.RangeStmt:
+		stmt = replaceRangeBody(stmt, fs.elimGotos(stmt.Body))
+		stmts = fs.moveGotosOutOfRange(stmt)
 	case *ast.BlockStmt:
 		var newStmts []ast.Stmt
 		for _, bodyStmt := range stmt.List {
