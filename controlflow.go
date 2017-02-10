@@ -196,6 +196,24 @@ func (fs *funcScope) moveGotosOutOfRange(rangeStmt *ast.RangeStmt) []ast.Stmt {
 	return stmts
 }
 
+func (fs *funcScope) moveGotosOutOfSwitch(switchStmt *ast.SwitchStmt) []ast.Stmt {
+	postStmts := map[*ast.Object]ast.Stmt{}
+	newSwitch := &ast.SwitchStmt{
+		Init: switchStmt.Init,
+		Tag:  switchStmt.Tag,
+		Body: &ast.BlockStmt{List: make([]ast.Stmt, len(switchStmt.Body.List))},
+	}
+	for i, s := range switchStmt.Body.List {
+		cc := s.(*ast.CaseClause)
+		newSwitch.Body.List[i] = replaceCaseClauseBody(cc, fs.liftGoto(cc.Body, postStmts, true))
+	}
+	stmts := []ast.Stmt{newSwitch}
+	for _, post := range postStmts {
+		stmts = append(stmts, post)
+	}
+	return stmts
+}
+
 func (fs *funcScope) elimGotos(stmt ast.Stmt) []ast.Stmt {
 	var stmts []ast.Stmt
 	switch stmt := stmt.(type) {
@@ -235,7 +253,7 @@ func (fs *funcScope) elimGotos(stmt ast.Stmt) []ast.Stmt {
 			tempBlock := &ast.BlockStmt{List: cc.Body}
 			newSwitch.Body.List[i] = replaceCaseClauseBody(cc, fs.elimGotos(tempBlock))
 		}
-		stmts = []ast.Stmt{newSwitch}
+		stmts = fs.moveGotosOutOfSwitch(newSwitch)
 	case *ast.BlockStmt:
 		var newStmts []ast.Stmt
 		for _, bodyStmt := range stmt.List {
